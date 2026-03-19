@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>CloudDrop</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: #f0f2f5;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      padding: 24px;
+    }
+
+    .card {
+      background: #ffffff;
+      border-radius: 12px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+      padding: 40px;
+      width: 100%;
+      max-width: 520px;
+    }
+
+    h1 {
+      font-size: 1.5rem;
+      color: #1a1a2e;
+      margin-bottom: 6px;
+    }
+
+    .subtitle {
+      font-size: 0.875rem;
+      color: #6b7280;
+      margin-bottom: 32px;
+    }
+
+    label {
+      display: block;
+      font-size: 0.875rem;
+      font-weight: 600;
+      color: #374151;
+      margin-bottom: 6px;
+    }
+
+    textarea {
+      width: 100%;
+      height: 120px;
+      border: 1px solid #d1d5db;
+      border-radius: 8px;
+      padding: 12px;
+      font-size: 0.9rem;
+      color: #111827;
+      resize: vertical;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    textarea:focus {
+      border-color: #4f46e5;
+    }
+
+    .file-drop {
+      margin-top: 24px;
+      border: 2px dashed #d1d5db;
+      border-radius: 8px;
+      padding: 28px;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color 0.2s, background 0.2s;
+    }
+
+    .file-drop:hover,
+    .file-drop.dragover {
+      border-color: #4f46e5;
+      background: #f5f3ff;
+    }
+
+    .file-drop input[type="file"] {
+      display: none;
+    }
+
+    .file-drop-icon {
+      font-size: 2rem;
+      margin-bottom: 8px;
+    }
+
+    .file-drop p {
+      font-size: 0.875rem;
+      color: #6b7280;
+    }
+
+    .file-drop span {
+      color: #4f46e5;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    #file-list {
+      margin-top: 12px;
+      font-size: 0.8rem;
+      color: #374151;
+    }
+
+    #file-list li {
+      list-style: none;
+      padding: 4px 0;
+      border-bottom: 1px solid #f3f4f6;
+    }
+
+    button[type="submit"] {
+      margin-top: 28px;
+      width: 100%;
+      padding: 12px;
+      background: #4f46e5;
+      color: #ffffff;
+      font-size: 1rem;
+      font-weight: 600;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    button[type="submit"]:hover {
+      background: #4338ca;
+    }
+
+    button[type="submit"]:disabled {
+      background: #a5b4fc;
+      cursor: not-allowed;
+    }
+
+    #feedback {
+      margin-top: 20px;
+      padding: 14px;
+      border-radius: 8px;
+      font-size: 0.875rem;
+      display: none;
+    }
+
+    #feedback.success {
+      background: #ecfdf5;
+      color: #065f46;
+      border: 1px solid #6ee7b7;
+    }
+
+    #feedback.error {
+      background: #fef2f2;
+      color: #991b1b;
+      border: 1px solid #fca5a5;
+    }
+
+    #feedback ul {
+      margin-top: 8px;
+      padding-left: 18px;
+    }
+
+    #feedback ul li {
+      font-size: 0.8rem;
+      margin-top: 4px;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>CloudDrop</h1>
+    <p class="subtitle">Submit text, images, or any file to store it in S3.</p>
+
+    <form id="upload-form" enctype="multipart/form-data">
+
+      <label for="text_content">Text</label>
+      <textarea id="text_content" name="text_content" placeholder="Type or paste any text here..."></textarea>
+
+      <div class="file-drop" id="file-drop">
+        <input type="file" name="files" id="file-input" multiple />
+        <div class="file-drop-icon">&#128193;</div>
+        <p>Drag &amp; drop files here or <span onclick="document.getElementById('file-input').click()">browse</span></p>
+        <ul id="file-list"></ul>
+      </div>
+
+      <button type="submit" id="submit-btn">Upload to S3</button>
+    </form>
+
+    <div id="feedback"></div>
+  </div>
+
+  <script>
+    const dropZone = document.getElementById('file-drop');
+    const fileInput = document.getElementById('file-input');
+    const fileList = document.getElementById('file-list');
+    const form = document.getElementById('upload-form');
+    const feedback = document.getElementById('feedback');
+    const submitBtn = document.getElementById('submit-btn');
+
+    function renderFileList() {
+      fileList.innerHTML = '';
+      Array.from(fileInput.files).forEach(f => {
+        const li = document.createElement('li');
+        li.textContent = `${f.name} (${(f.size / 1024).toFixed(1)} KB)`;
+        fileList.appendChild(li);
+      });
+    }
+
+    fileInput.addEventListener('change', renderFileList);
+
+    dropZone.addEventListener('dragover', e => {
+      e.preventDefault();
+      dropZone.classList.add('dragover');
+    });
+
+    dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+
+    dropZone.addEventListener('drop', e => {
+      e.preventDefault();
+      dropZone.classList.remove('dragover');
+      const dt = new DataTransfer();
+      Array.from(e.dataTransfer.files).forEach(f => dt.items.add(f));
+      fileInput.files = dt.files;
+      renderFileList();
+    });
+
+    form.addEventListener('submit', async e => {
+      e.preventDefault();
+      feedback.style.display = 'none';
+      feedback.className = '';
+
+      const text = document.getElementById('text_content').value.trim();
+      const files = fileInput.files;
+
+      if (!text && files.length === 0) {
+        showFeedback('error', 'Please provide some text or select at least one file.');
+        return;
+      }
+
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Uploading...';
+
+      const formData = new FormData(form);
+
+      try {
+        const res = await fetch('/upload', { method: 'POST', body: formData });
+        const data = await res.json();
+
+        if (res.ok) {
+          let html = `<strong>Upload successful!</strong><ul>`;
+          data.uploaded.forEach(key => { html += `<li>${key}</li>`; });
+          html += `</ul>`;
+          showFeedback('success', html);
+          form.reset();
+          fileList.innerHTML = '';
+        } else {
+          showFeedback('error', `Error: ${data.error}`);
+        }
+      } catch (err) {
+        showFeedback('error', 'An unexpected error occurred. Please try again.');
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Upload to S3';
+      }
+    });
+
+    function showFeedback(type, html) {
+      feedback.className = type;
+      feedback.innerHTML = html;
+      feedback.style.display = 'block';
+    }
+  </script>
+</body>
+</html>
