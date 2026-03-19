@@ -49,9 +49,12 @@ pip install -r requirements.txt
 
 `S3_BUCKET_NAME` is the only environment variable the application requires. AWS credentials are handled automatically by boto3 and do not need to be set manually here.
 
-| Variable | Description |
-|---|---|
-| `S3_BUCKET_NAME` | The name of the S3 bucket where uploads will be stored |
+| Variable | Required | Description |
+|---|---|---|
+| `S3_BUCKET_NAME` | Yes | The name of the S3 bucket where uploads will be stored |
+| `AWS_ACCESS_KEY_ID` | No | AWS access key, if not using an IAM role |
+| `AWS_SECRET_ACCESS_KEY` | No | AWS secret key, if not using an IAM role |
+| `AWS_DEFAULT_REGION` | No | AWS region of the S3 bucket |
 
 ---
 
